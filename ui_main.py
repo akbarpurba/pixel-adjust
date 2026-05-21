@@ -142,7 +142,7 @@ class ImageEditor(QWidget):
         )
 
         self.subtitle = QLabel(
-            "Brightness & Contrast Editor"
+            "Digital Image Processing using RGB Matrix"
         )
 
         self.subtitle.setAlignment(
@@ -286,7 +286,7 @@ class ImageEditor(QWidget):
         )
 
         self.graph_button = QPushButton(
-            "Compare Plot"
+            "Image Analysis"
         )
 
         self.exit_button = QPushButton(
@@ -397,7 +397,7 @@ class ImageEditor(QWidget):
         # =====================================
 
         self.pixel_info = QLabel(
-            "Pixel [0,0] RGB : -"
+            "Pixel [1,1] RGB : -"
         )
 
         # =====================================
@@ -717,10 +717,6 @@ class ImageEditor(QWidget):
             channel * width
         )
 
-        # =====================================
-        # NUMPY -> QIMAGE
-        # =====================================
-
         q_image = QImage(
             result_array.data,
             width,
@@ -728,7 +724,7 @@ class ImageEditor(QWidget):
             bytes_per_line,
             QImage.Format_RGB888
         )
-
+        
         # =====================================
         # COPY AGAR MEMORY AMAN
         # =====================================
@@ -761,7 +757,7 @@ class ImageEditor(QWidget):
         pixel = result.getpixel((0, 0))
 
         self.pixel_info.setText(
-            f"Pixel [0,0] RGB : {pixel}"
+            f"Pixel [1,1] RGB : {pixel}"
         )
 
         # =====================================
@@ -806,6 +802,12 @@ class ImageEditor(QWidget):
 
         self.contrast_slider.setValue(10)
 
+        if self.image_path:
+
+            self.show_image(
+                self.image_path,
+                self.result_label
+            )
     # =====================================
     # SHOW GRAPH - DENGAN LOADING
     # =====================================
@@ -858,18 +860,3 @@ class ImageEditor(QWidget):
         self.movie.stop()
         self.loading_overlay.hide()
         self.graph_thread = None
-
-
-# =====================================
-# MAIN
-# =====================================
-
-if __name__ == "__main__":
-
-    app = QApplication(sys.argv)
-
-    editor = ImageEditor()
-
-    editor.show()
-
-    sys.exit(app.exec_())

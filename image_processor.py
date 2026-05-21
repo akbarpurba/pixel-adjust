@@ -1,65 +1,90 @@
 from PIL import Image
-import numpy as np
 
 
 def process_image(image_path, alpha, beta):
+
     """
     =========================================
     PROCESS IMAGE RGB
     =========================================
 
-    alpha = contrast
-    beta = brightness
-
     Rumus:
+
     g(x,y) = α × f(x,y) + β
+
+    α = contrast
+    β = brightness
     """
 
     # =========================================
-    # MEMBUKA GAMBAR RGB
+    # OPEN IMAGE RGB
     # =========================================
 
-    img = Image.open(image_path).convert("RGB")
+    img = Image.open(
+        image_path
+    ).convert("RGB")
+
+    width, height = img.size
+
+    pixels = img.load()
 
     # =========================================
-    # UBAH KE ARRAY NUMPY
+    # LOOP PIXEL
     # =========================================
 
-    matrix = np.asarray(
-        img,
-        dtype=np.float32
-    )
+    for y in range(height):
 
-    # =========================================
-    # OPERASI BRIGHTNESS & CONTRAST
-    # =========================================
+        for x in range(width):
 
-    result = (alpha * matrix) + beta
+            # =====================================
+            # RGB PIXEL
+            # =====================================
 
-    # =========================================
-    # CLIPPING PIXEL
-    # =========================================
+            r, g, b = pixels[x, y]
 
-    result = np.clip(
-        result,
-        0,
-        255
-    )
+            # =====================================
+            # ARITHMETIC OPERATION
+            # =====================================
 
-    # =========================================
-    # KONVERSI UINT8
-    # =========================================
+            new_r = int(
+                (alpha * r) + beta
+            )
 
-    result = result.astype(
-        np.uint8
-    )
+            new_g = int(
+                (alpha * g) + beta
+            )
 
-    # =========================================
-    # KEMBALIKAN KE IMAGE
-    # =========================================
+            new_b = int(
+                (alpha * b) + beta
+            )
 
-    result_img = Image.fromarray(
-        result
-    )
+            # =====================================
+            # CLIPPING
+            # =====================================
 
-    return result_img
+            new_r = max(
+                0,
+                min(255, new_r)
+            )
+
+            new_g = max(
+                0,
+                min(255, new_g)
+            )
+
+            new_b = max(
+                0,
+                min(255, new_b)
+            )
+
+            # =====================================
+            # SAVE PIXEL
+            # =====================================
+
+            pixels[x, y] = (
+                new_r,
+                new_g,
+                new_b
+            )
+
+    return img
