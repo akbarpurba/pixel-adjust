@@ -29,10 +29,23 @@ from PyQt5.QtCore import (
     pyqtSignal,
 )
 
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 from image_processor import process_image
 from graph import compare_plot
+
+
+# =====================================
+# WATERMARK CONFIGURATION
+# =====================================
+
+# Konfigurasi Watermark - Ubah di sini dengan mudah!
+WM_CONFIG = {
+    'size_percent': 0.25,      # Ukuran watermark (persentase dari ukuran gambar)
+    'position_offset': 30,      # Jarak dari tepi (pixel)
+    'positions': ['bottom_right'],  # Posisi: 'top_left', 'top_right', 'bottom_left', 'bottom_right'
+    'opacity': 150,            # Opasitas watermark (0-255, 255 = tidak transparan)
+}
 
 
 # =====================================
@@ -638,6 +651,72 @@ class ImageEditor(QWidget):
         )
 
     # =====================================
+    # ADD WATERMARK TO IMAGE
+    # =====================================
+
+    def add_watermark(self, image):
+        """Tambahkan watermark ke gambar PIL dengan konfigurasi dari WM_CONFIG"""
+        try:
+            # Buka gambar watermark
+            watermark = Image.open("assets/wm.png")
+            
+            # Konversi watermark ke mode RGBA jika belum
+            if watermark.mode != 'RGBA':
+                watermark = watermark.convert('RGBA')
+            
+            # Atur opasitas watermark
+            if WM_CONFIG['opacity'] < 255:
+                # Buat alpha channel baru dengan opasitas yang diinginkan
+                alpha = watermark.split()[3]
+                alpha = alpha.point(lambda p: p * WM_CONFIG['opacity'] // 255)
+                watermark.putalpha(alpha)
+            
+            # Hitung ukuran watermark dari konfigurasi
+            wm_width = int(image.width * WM_CONFIG['size_percent'])
+            wm_height = int(image.height * WM_CONFIG['size_percent'])
+            watermark = watermark.resize((wm_width, wm_height), Image.Resampling.LANCZOS)
+            
+            # Konversi image ke RGBA jika perlu
+            if image.mode != 'RGBA':
+                image = image.convert('RGBA')
+            
+            # Buat layer transparan
+            watermark_layer = Image.new('RGBA', image.size, (0, 0, 0, 0))
+            
+            # Posisi watermark berdasarkan konfigurasi
+            offset = WM_CONFIG['position_offset']
+            
+            for position in WM_CONFIG['positions']:
+                if position == 'top_left':
+                    pos_x = offset
+                    pos_y = offset
+                elif position == 'top_right':
+                    pos_x = image.width - wm_width - offset
+                    pos_y = offset
+                elif position == 'bottom_left':
+                    pos_x = offset
+                    pos_y = image.height - wm_height - offset
+                elif position == 'bottom_right':
+                    pos_x = image.width - wm_width - offset
+                    pos_y = image.height - wm_height - offset
+                else:
+                    continue
+                
+                watermark_layer.paste(watermark, (pos_x, pos_y), watermark)
+            
+            # Composite gambar dengan watermark
+            result = Image.alpha_composite(image, watermark_layer)
+            
+            return result
+            
+        except FileNotFoundError:
+            print("Watermark file not found")
+            return image
+        except Exception as e:
+            print(f"Error adding watermark: {e}")
+            return image
+
+    # =====================================
     # UPDATE IMAGE
     # =====================================
 
@@ -690,14 +769,15 @@ class ImageEditor(QWidget):
 
     def on_process_finished(self, result):
 
-        self.current_result = result
+        # Tambahkan watermark ke hasil
+        self.current_result = self.add_watermark(result)
 
         # =====================================
         # PIL IMAGE -> NUMPY
         # =====================================
 
         result_array = np.array(
-            result,
+            self.current_result,
             dtype=np.uint8
         )
 
@@ -722,7 +802,7 @@ class ImageEditor(QWidget):
             width,
             height,
             bytes_per_line,
-            QImage.Format_RGB888
+            QImage.Format_RGBA8888
         )
         
         # =====================================
@@ -754,10 +834,10 @@ class ImageEditor(QWidget):
         # PIXEL INFO
         # =====================================
 
-        pixel = result.getpixel((0, 0))
+        pixel = self.current_result.getpixel((0, 0))
 
         self.pixel_info.setText(
-            f"Pixel [1,1] RGB : {pixel}"
+            f"Pixel [1,1] RGB : {pixel[:3]}"
         )
 
         # =====================================
@@ -787,10 +867,14 @@ class ImageEditor(QWidget):
         )
 
         if file_name:
-
-            self.current_result.save(
-                file_name
-            )
+            # Simpan gambar yang sudah ada watermark-nya
+            if file_name.lower().endswith(('.jpg', '.jpeg')):
+                # Untuk JPG, konversi ke RGB
+                rgb_image = self.current_result.convert('RGB')
+                rgb_image.save(file_name)
+            else:
+                # Untuk PNG, simpan dengan transparansi
+                self.current_result.save(file_name)
 
     # =====================================
     # RESET SLIDER
@@ -808,13 +892,16 @@ class ImageEditor(QWidget):
                 self.image_path,
                 self.result_label
             )
-    # =====================================
-    # SHOW GRAPH - DENGAN LOADING
-    # =====================================
+            
+            # Reset result
+            self.current_result = None
+            
+            # Update dengan watermark
+            self.update_image()
 
     # =====================================
-# SHOW GRAPH - DENGAN QTimer
-# =====================================
+    # SHOW GRAPH - DENGAN QTimer
+    # =====================================
 
     def show_compare_plot(self):
 
@@ -860,3 +947,17 @@ class ImageEditor(QWidget):
         self.movie.stop()
         self.loading_overlay.hide()
         self.graph_thread = None
+
+
+# =====================================
+# MAIN
+# =====================================
+
+if __name__ == "__main__":
+
+    app = QApplication(sys.argv)
+
+    window = ImageEditor()
+    window.show()
+
+    sys.exit(app.exec_())
