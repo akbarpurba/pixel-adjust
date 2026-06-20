@@ -44,7 +44,7 @@ WM_CONFIG = {
     'size_percent': 0.25,      # Ukuran watermark (persentase dari ukuran gambar)
     'position_offset': 30,      # Jarak dari tepi (pixel)
     'positions': ['bottom_right'],  # Posisi: 'top_left', 'top_right', 'bottom_left', 'bottom_right'
-    'opacity': 150,            # Opasitas watermark (0-255, 255 = tidak transparan)
+    'opacity': 180,            # Opasitas watermark (0-255, 255 = tidak transparan)
 }
 
 
